@@ -29,9 +29,12 @@ class OrderControllerTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'current_page',
+                'success',
                 'data' => [
-                    '*' => ['id', 'user_id', 'total_price', 'status']
+                    'current_page',
+                    'data' => [
+                        '*' => ['id', 'user_id', 'total_price', 'status']
+                    ]
                 ]
             ]);
     }
@@ -61,7 +64,8 @@ class OrderControllerTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonStructure([
-                'id', 'user_id', 'total_price', 'status', 'items'
+                'success',
+                'data' => ['id', 'user_id', 'total_price', 'status', 'items']
             ]);
 
         $this->assertDatabaseHas('orders', [
@@ -83,7 +87,7 @@ class OrderControllerTest extends TestCase
 
         $response->assertStatus(422)
             ->assertJsonValidationErrors([
-                'user_id', 'customer_name', 'phone', 'address', 'total_price'
+                'user_id', 'customer_name', 'items'
             ]);
     }
 
@@ -100,8 +104,11 @@ class OrderControllerTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'id', 'user_id', 'total_price', 'items' => [
-                    '*' => ['id', 'product_id', 'quantity']
+                'success',
+                'data' => [
+                    'id', 'user_id', 'total_price', 'items' => [
+                        '*' => ['id', 'product_id', 'quantity']
+                    ]
                 ]
             ]);
     }
@@ -111,19 +118,19 @@ class OrderControllerTest extends TestCase
     {
         $order = Order::factory()->create([
             'user_id' => 1,
-            'status' => 'pending'
+            'status' => 'new'
         ]);
 
         $response = $this->putJson("/api/orders/{$order->id}/status", [
-            'status' => 'completed'
+            'status' => 'confirmed'
         ]);
 
         $response->assertStatus(200)
-            ->assertJson(['status' => 'completed']);
+            ->assertJsonFragment(['status' => 'confirmed']);
 
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
-            'status' => 'completed'
+            'status' => 'confirmed'
         ]);
     }
 

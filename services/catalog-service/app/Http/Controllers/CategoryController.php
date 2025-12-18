@@ -34,7 +34,7 @@ class CategoryController extends Controller
     return view('admin.categories.create');
   }
 
-  public function store(Request $request): RedirectResponse
+  public function store(Request $request)
   {
     $data = $request->validate([
       'title' => ['required', 'string', 'max:255'],
@@ -56,11 +56,9 @@ class CategoryController extends Controller
       $counter++;
     }
 
-    Category::create($data);
+    $category = Category::create($data);
 
-    return redirect()
-      ->route('admin.categories.index')
-      ->with('success', 'Категория создана успешно');
+    return response()->json($category, 201);
   }
 
 
@@ -69,8 +67,10 @@ class CategoryController extends Controller
     return view('admin.categories.edit', compact('category'));
   }
 
-  public function update(Request $request, Category $category): RedirectResponse
+  public function update(Request $request, $id)
   {
+    $category = Category::findOrFail($id);
+    
     $data = $request->validate([
       'title' => ['required', 'string', 'max:255'],
       'slug'  => ['nullable', 'string', 'max:255', 'unique:categories,slug,' . $category->id],
@@ -83,17 +83,14 @@ class CategoryController extends Controller
 
     $category->update($data);
 
-    return redirect()
-      ->route('admin.categories.index')
-      ->with('success', 'Категория обновлена');
+    return response()->json($category);
   }
 
-  public function destroy(Category $category): RedirectResponse
+  public function destroy($id)
   {
+    $category = Category::findOrFail($id);
     $category->delete();
 
-    return redirect()
-      ->route('admin.categories.index')
-      ->with('success', 'Категория удалена');
+    return response()->json(['message' => 'Category deleted successfully']);
   }
 }

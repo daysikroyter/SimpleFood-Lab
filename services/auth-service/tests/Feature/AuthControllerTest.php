@@ -19,11 +19,14 @@ class AuthControllerTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'current_page',
+                'success',
                 'data' => [
-                    '*' => ['id', 'name', 'email', 'created_at']
-                ],
-                'total'
+                    'current_page',
+                    'data' => [
+                        '*' => ['id', 'name', 'email', 'created_at']
+                    ],
+                    'total'
+                ]
             ]);
     }
 
@@ -82,8 +85,11 @@ class AuthControllerTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJson([
-                'id' => $user->id,
-                'email' => $user->email
+                'success' => true,
+                'data' => [
+                    'id' => $user->id,
+                    'email' => $user->email
+                ]
             ]);
     }
 
@@ -107,7 +113,10 @@ class AuthControllerTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJson([
-                'name' => 'Updated Name'
+                'success' => true,
+                'data' => [
+                    'name' => 'Updated Name'
+                ]
             ]);
 
         $this->assertDatabaseHas('users', [
@@ -123,7 +132,11 @@ class AuthControllerTest extends TestCase
 
         $response = $this->deleteJson("/api/users/{$user->id}");
 
-        $response->assertStatus(200);
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'User deleted successfully'
+            ]);
 
         $this->assertDatabaseMissing('users', [
             'id' => $user->id

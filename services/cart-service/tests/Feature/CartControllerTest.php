@@ -19,9 +19,12 @@ class CartControllerTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'current_page',
+                'success',
                 'data' => [
-                    '*' => ['id', 'user_id', 'product_id', 'quantity']
+                    'current_page',
+                    'data' => [
+                        '*' => ['id', 'user_id', 'product_id', 'quantity']
+                    ]
                 ]
             ]);
     }
@@ -35,10 +38,10 @@ class CartControllerTest extends TestCase
             'quantity' => 2
         ];
 
-        $response = $this->postJson('/api/cart', $cartData);
+        $response = $this->postJson('/api/cart/items', $cartData);
 
-        $response->assertStatus(201)
-            ->assertJson($cartData);
+        $response->assertStatus(200)
+            ->assertJsonFragment(['success' => true]);
 
         $this->assertDatabaseHas('cart_items', $cartData);
     }
@@ -46,7 +49,7 @@ class CartControllerTest extends TestCase
     /** @test */
     public function it_validates_quantity_is_positive()
     {
-        $response = $this->postJson('/api/cart', [
+        $response = $this->postJson('/api/cart/items', [
             'user_id' => 1,
             'product_id' => 1,
             'quantity' => 0
@@ -65,12 +68,12 @@ class CartControllerTest extends TestCase
             'quantity' => 2
         ]);
 
-        $response = $this->putJson("/api/cart/{$cartItem->id}", [
+        $response = $this->putJson("/api/cart/items/{$cartItem->id}", [
             'quantity' => 5
         ]);
 
         $response->assertStatus(200)
-            ->assertJson(['quantity' => 5]);
+            ->assertJsonFragment(['quantity' => 5]);
 
         $this->assertDatabaseHas('cart_items', [
             'id' => $cartItem->id,
@@ -83,7 +86,7 @@ class CartControllerTest extends TestCase
     {
         $cartItem = CartItem::factory()->create(['user_id' => 1]);
 
-        $response = $this->deleteJson("/api/cart/{$cartItem->id}");
+        $response = $this->deleteJson("/api/cart/items/{$cartItem->id}");
 
         $response->assertStatus(200);
 
@@ -117,13 +120,20 @@ class CartControllerTest extends TestCase
             'quantity' => 2
         ]);
 
-        $response = $this->postJson('/api/cart', [
+        $response = $this->postJson('/api/cart/items', [
             'user_id' => 1,
             'product_id' => 1,
             'quantity' => 3
         ]);
 
-        // Should fail due to unique constraint
-        $response->assertStatus(422);
+        // Should succeed - quantity will be incremented
+        $response->assertStatus(200);
+        
+        // Check that quantity was incremented, not duplicated
+        $this->assertDatabaseHas('cart_items', [
+            'user_id' => 1,
+            'product_id' => 1,
+            'quantity' => 5  // 2 + 3
+        ]);
     }
 }

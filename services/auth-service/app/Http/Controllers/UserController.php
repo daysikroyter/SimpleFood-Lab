@@ -28,6 +28,22 @@ class UserController extends Controller
         ]);
     }
 
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|string|min:8',
+            'is_admin' => 'sometimes|boolean',
+        ]);
+
+        $validated['password'] = Hash::make($validated['password']);
+
+        $user = User::create($validated);
+
+        return response()->json($user, 201);
+    }
+
     public function update(Request $request, $id)
     {
         $user = User::findOrFail($id);

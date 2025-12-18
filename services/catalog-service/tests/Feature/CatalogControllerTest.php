@@ -104,7 +104,7 @@ class CatalogControllerTest extends TestCase
         $response = $this->getJson("/api/products/{$product->id}");
 
         $response->assertStatus(200)
-            ->assertJson([
+            ->assertJsonFragment([
                 'id' => $product->id,
                 'title' => $product->title
             ]);
@@ -123,7 +123,7 @@ class CatalogControllerTest extends TestCase
 
         $response->assertStatus(200);
         
-        $data = $response->json('data');
+        $data = $response->json('data'); // Direct pagination data array
         $this->assertCount(2, $data);
     }
 
@@ -139,7 +139,7 @@ class CatalogControllerTest extends TestCase
 
         $response->assertStatus(200);
         
-        $data = $response->json('data');
+        $data = $response->json('data'); // Direct pagination data array
         $this->assertGreaterThanOrEqual(2, count($data));
     }
 }

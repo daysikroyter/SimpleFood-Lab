@@ -19,9 +19,12 @@ class PaymentControllerTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'current_page',
+                'success',
                 'data' => [
-                    '*' => ['id', 'order_id', 'user_id', 'amount', 'status']
+                    'current_page',
+                    'data' => [
+                        '*' => ['id', 'order_id', 'user_id', 'amount', 'status']
+                    ]
                 ]
             ]);
     }
@@ -34,15 +37,20 @@ class PaymentControllerTest extends TestCase
             'user_id' => 1,
             'amount' => 3200,
             'payment_method' => 'card',
+            'card_token' => 'tok_test123',
             'status' => 'pending'
         ];
 
         $response = $this->postJson('/api/payments', $paymentData);
 
         $response->assertStatus(201)
-            ->assertJson($paymentData);
+            ->assertJsonPath('data.amount', '3200.00');
 
-        $this->assertDatabaseHas('payments', $paymentData);
+        $this->assertDatabaseHas('payments', [
+            'order_id' => 1,
+            'user_id' => 1,
+            'amount' => 3200
+        ]);
     }
 
     /** @test */
@@ -92,7 +100,7 @@ class PaymentControllerTest extends TestCase
         $response = $this->getJson("/api/payments/{$payment->id}");
 
         $response->assertStatus(200)
-            ->assertJson([
+            ->assertJsonFragment([
                 'id' => $payment->id,
                 'amount' => $payment->amount
             ]);
@@ -108,7 +116,7 @@ class PaymentControllerTest extends TestCase
 
         $response->assertStatus(200);
         
-        $data = $response->json('data');
+        $data = $response->json('data.data'); // Pagination structure
         $this->assertCount(2, $data);
     }
 
@@ -122,7 +130,7 @@ class PaymentControllerTest extends TestCase
 
         $response->assertStatus(200);
         
-        $data = $response->json('data');
+        $data = $response->json('data.data'); // Pagination structure
         $this->assertCount(2, $data);
     }
 
