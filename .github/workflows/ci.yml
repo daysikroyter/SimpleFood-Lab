@@ -29,22 +29,9 @@ jobs:
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
-          extensions: mbstring, xml, ctype, json, bcmath, pdo, sqlite3
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, json, bcmath, pdo, pdo_sqlite
           coverage: none
-
-      - name: Get composer cache directory
-        id: composer-cache
-        working-directory: ./services/${{ matrix.service }}
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ matrix.service }}-${{ hashFiles(format('./services/{0}/composer.lock', matrix.service)) }}
-          restore-keys: |
-            ${{ runner.os }}-composer-${{ matrix.service }}-
 
       - name: Install dependencies
         working-directory: ./services/${{ matrix.service }}
@@ -56,25 +43,8 @@ jobs:
 
       - name: Run tests
         working-directory: ./services/${{ matrix.service }}
-        run: php artisan test --env=testing
+        run: vendor/bin/phpunit --testdox
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ":memory:"
           APP_ENV: testing
-
-  summary:
-    name: CI Summary
-    runs-on: ubuntu-latest
-    needs: [test]
-    if: always()
-
-    steps:
-      - name: Check test results
-        run: |
-          if [ "${{ needs.test.result }}" == "success" ]; then
-            echo "✅ All tests passed!"
-            exit 0
-          else
-            echo "❌ Some tests failed"
-            exit 1
-          fi
