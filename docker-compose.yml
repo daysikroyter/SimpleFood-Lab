@@ -1,0 +1,273 @@
+version: '3.8'
+
+services:
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: simplefood-api-gateway
+    ports:
+      - "9000:80"
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+    volumes:
+      - ./services/api-gateway:/var/www
+    networks:
+      - simplefood-network
+    depends_on:
+      - auth-service
+      - catalog-service
+      - cart-service
+      - order-service
+      - payment-service
+      - admin-service
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: simplefood-auth-service
+    ports:
+      - "8001:80"
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_HOST=mysql-auth
+      - DB_DATABASE=auth_db
+      - DB_USERNAME=root
+      - DB_PASSWORD=secret
+    volumes:
+      - ./services/auth-service:/var/www
+    networks:
+      - simplefood-network
+    depends_on:
+      - mysql-auth
+
+  # Catalog Service
+  catalog-service:
+    build:
+      context: ./services/catalog-service
+      dockerfile: Dockerfile
+    container_name: simplefood-catalog-service
+    ports:
+      - "8002:80"
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_HOST=mysql-catalog
+      - DB_DATABASE=catalog_db
+      - DB_USERNAME=root
+      - DB_PASSWORD=secret
+    volumes:
+      - ./services/catalog-service:/var/www
+    networks:
+      - simplefood-network
+    depends_on:
+      - mysql-catalog
+
+  # Cart Service
+  cart-service:
+    build:
+      context: ./services/cart-service
+      dockerfile: Dockerfile
+    container_name: simplefood-cart-service
+    ports:
+      - "8003:80"
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_HOST=mysql-cart
+      - DB_DATABASE=cart_db
+      - DB_USERNAME=root
+      - DB_PASSWORD=secret
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./services/cart-service:/var/www
+    networks:
+      - simplefood-network
+    depends_on:
+      - mysql-cart
+      - redis
+
+  # Order Service
+  order-service:
+    build:
+      context: ./services/order-service
+      dockerfile: Dockerfile
+    container_name: simplefood-order-service
+    ports:
+      - "8000:80"
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_HOST=mysql-orders
+      - DB_DATABASE=orders_db
+      - DB_USERNAME=root
+      - DB_PASSWORD=secret
+    volumes:
+      - ./services/order-service:/var/www
+    networks:
+      - simplefood-network
+    depends_on:
+      - mysql-orders
+
+  # Payment Service
+  payment-service:
+    build:
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+    container_name: simplefood-payment-service
+    ports:
+      - "8004:80"
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_HOST=mysql-payments
+      - DB_DATABASE=payments_db
+      - DB_USERNAME=root
+      - DB_PASSWORD=secret
+    volumes:
+      - ./services/payment-service:/var/www
+    networks:
+      - simplefood-network
+    depends_on:
+      - mysql-payments
+
+  # Admin Service
+  admin-service:
+    build:
+      context: ./services/admin-service
+      dockerfile: Dockerfile
+    container_name: simplefood-admin-service
+    ports:
+      - "8005:80"
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - DB_HOST=mysql-admin
+      - DB_DATABASE=admin_db
+      - DB_USERNAME=root
+      - DB_PASSWORD=secret
+    volumes:
+      - ./services/admin-service:/var/www
+    networks:
+      - simplefood-network
+    depends_on:
+      - mysql-admin
+
+  # Databases
+  mysql-auth:
+    image: mysql:8.0
+    container_name: simplefood-mysql-auth
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: auth_db
+    volumes:
+      - mysql-auth-data:/var/lib/mysql
+    networks:
+      - simplefood-network
+    ports:
+      - "3307:3306"
+
+  mysql-catalog:
+    image: mysql:8.0
+    container_name: simplefood-mysql-catalog
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: catalog_db
+    volumes:
+      - mysql-catalog-data:/var/lib/mysql
+    networks:
+      - simplefood-network
+    ports:
+      - "3308:3306"
+
+  mysql-cart:
+    image: mysql:8.0
+    container_name: simplefood-mysql-cart
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: cart_db
+    volumes:
+      - mysql-cart-data:/var/lib/mysql
+    networks:
+      - simplefood-network
+    ports:
+      - "3309:3306"
+
+  mysql-orders:
+    image: mysql:8.0
+    container_name: simplefood-mysql-orders
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: orders_db
+    volumes:
+      - mysql-orders-data:/var/lib/mysql
+    networks:
+      - simplefood-network
+    ports:
+      - "3310:3306"
+
+  mysql-payments:
+    image: mysql:8.0
+    container_name: simplefood-mysql-payments
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: payments_db
+    volumes:
+      - mysql-payments-data:/var/lib/mysql
+    networks:
+      - simplefood-network
+    ports:
+      - "3311:3306"
+
+  mysql-admin:
+    image: mysql:8.0
+    container_name: simplefood-mysql-admin
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: admin_db
+    volumes:
+      - mysql-admin-data:/var/lib/mysql
+    networks:
+      - simplefood-network
+    ports:
+      - "3312:3306"
+
+  # Redis для кеширования
+  redis:
+    image: redis:7-alpine
+    container_name: simplefood-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - simplefood-network
+
+  # RabbitMQ для очередей сообщений между сервисами
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: simplefood-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    networks:
+      - simplefood-network
+
+networks:
+  simplefood-network:
+    driver: bridge
+
+volumes:
+  mysql-auth-data:
+  mysql-catalog-data:
+  mysql-cart-data:
+  mysql-orders-data:
+  mysql-payments-data:
+  mysql-admin-data:
