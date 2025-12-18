@@ -4,13 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class AuthControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
+    #[Test]
     public function it_can_list_all_users()
     {
         User::factory()->count(3)->create();
@@ -30,7 +31,7 @@ class AuthControllerTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_create_a_user()
     {
         $userData = [
@@ -53,7 +54,7 @@ class AuthControllerTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_required_fields_when_creating_user()
     {
         $response = $this->postJson('/api/users', []);
@@ -62,7 +63,7 @@ class AuthControllerTest extends TestCase
             ->assertJsonValidationErrors(['name', 'email', 'password']);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_email_format()
     {
         $response = $this->postJson('/api/users', [
@@ -76,7 +77,7 @@ class AuthControllerTest extends TestCase
             ->assertJsonValidationErrors(['email']);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_show_a_single_user()
     {
         $user = User::factory()->create();
@@ -93,7 +94,7 @@ class AuthControllerTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_404_for_non_existent_user()
     {
         $response = $this->getJson('/api/users/999');
@@ -101,7 +102,7 @@ class AuthControllerTest extends TestCase
         $response->assertStatus(404);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_update_a_user()
     {
         $user = User::factory()->create();
@@ -125,7 +126,7 @@ class AuthControllerTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_delete_a_user()
     {
         $user = User::factory()->create();

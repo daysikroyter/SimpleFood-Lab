@@ -5,13 +5,14 @@ namespace Tests\Feature;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class CatalogControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
+    #[Test]
     public function it_can_list_all_categories()
     {
         Category::factory()->count(3)->create();
@@ -24,7 +25,7 @@ class CatalogControllerTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_create_a_category()
     {
         $categoryData = [
@@ -41,7 +42,7 @@ class CatalogControllerTest extends TestCase
         $this->assertDatabaseHas('categories', $categoryData);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_list_all_products()
     {
         $category = Category::factory()->create();
@@ -58,7 +59,7 @@ class CatalogControllerTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_create_a_product()
     {
         $category = Category::factory()->create();
@@ -79,7 +80,7 @@ class CatalogControllerTest extends TestCase
         $this->assertDatabaseHas('products', $productData);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_product_price_is_positive()
     {
         $category = Category::factory()->create();
@@ -95,7 +96,7 @@ class CatalogControllerTest extends TestCase
             ->assertJsonValidationErrors(['price']);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_show_a_single_product()
     {
         $category = Category::factory()->create();
@@ -110,7 +111,7 @@ class CatalogControllerTest extends TestCase
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_filter_products_by_category()
     {
         $category1 = Category::factory()->create(['slug' => 'pizza']);
@@ -123,11 +124,11 @@ class CatalogControllerTest extends TestCase
 
         $response->assertStatus(200);
         
-        $data = $response->json('data'); // Direct pagination data array
+        $data = $response->json('data');
         $this->assertCount(2, $data);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_search_products_by_title()
     {
         $category = Category::factory()->create();
@@ -139,7 +140,7 @@ class CatalogControllerTest extends TestCase
 
         $response->assertStatus(200);
         
-        $data = $response->json('data'); // Direct pagination data array
+        $data = $response->json('data');
         $this->assertGreaterThanOrEqual(2, count($data));
     }
 }

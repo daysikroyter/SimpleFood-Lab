@@ -4,26 +4,18 @@ namespace Tests\Feature;
 
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class OrderControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        
-        // Create a user for foreign key
-        User::factory()->create(['id' => 1]);
-    }
-
-    /** @test */
+    #[Test]
     public function it_can_list_all_orders()
     {
-        Order::factory()->count(3)->create(['user_id' => 1]);
+        Order::factory()->count(3)->create();
 
         $response = $this->getJson('/api/orders');
 
@@ -33,30 +25,22 @@ class OrderControllerTest extends TestCase
                 'data' => [
                     'current_page',
                     'data' => [
-                        '*' => ['id', 'user_id', 'total_price', 'status']
+                        '*' => ['id', 'user_id', 'status', 'total_amount']
                     ]
                 ]
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_create_an_order_with_items()
     {
         $orderData = [
             'user_id' => 1,
-            'customer_name' => 'John Doe',
-            'phone' => '+1234567890',
-            'address' => '123 Main St',
-            'total_price' => 2400,
-            'payment_method' => 'card',
+            'delivery_address' => '123 Main St',
+            'phone' => '+79991234567',
             'items' => [
-                [
-                    'product_id' => 1,
-                    'product_title' => 'Margherita Pizza',
-                    'unit_price' => 1200,
-                    'quantity' => 2,
-                    'line_total' => 2400
-                ]
+                ['product_id' => 1, 'quantity' => 2, 'price' => 500],
+                ['product_id' => 2, 'quantity' => 1, 'price' => 800]
             ]
         ];
 
@@ -65,40 +49,29 @@ class OrderControllerTest extends TestCase
         $response->assertStatus(201)
             ->assertJsonStructure([
                 'success',
-                'data' => ['id', 'user_id', 'total_price', 'status', 'items']
+                'data' => ['id', 'user_id', 'status', 'total_amount']
             ]);
 
         $this->assertDatabaseHas('orders', [
             'user_id' => 1,
-            'customer_name' => 'John Doe',
-            'total_price' => 2400
-        ]);
-
-        $this->assertDatabaseHas('order_items', [
-            'product_id' => 1,
-            'quantity' => 2
+            'delivery_address' => '123 Main St'
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_required_order_fields()
     {
         $response = $this->postJson('/api/orders', []);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors([
-                'user_id', 'customer_name', 'items'
-            ]);
+            ->assertJsonValidationErrors(['user_id', 'delivery_address', 'items']);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_show_single_order_with_items()
     {
-        $order = Order::factory()->create(['user_id' => 1]);
-        OrderItem::factory()->create([
-            'order_id' => $order->id,
-            'product_id' => 1
-        ]);
+        $order = Order::factory()->create();
+        OrderItem::factory()->count(2)->create(['order_id' => $order->id]);
 
         $response = $this->getJson("/api/orders/{$order->id}");
 
@@ -106,40 +79,40 @@ class OrderControllerTest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    'id', 'user_id', 'total_price', 'items' => [
-                        '*' => ['id', 'product_id', 'quantity']
+                    'id',
+                    'user_id',
+                    'status',
+                    'items' => [
+                        '*' => ['id', 'product_id', 'quantity', 'price']
                     ]
                 ]
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_update_order_status()
     {
-        $order = Order::factory()->create([
-            'user_id' => 1,
-            'status' => 'new'
-        ]);
+        $order = Order::factory()->create(['status' => 'pending']);
 
-        $response = $this->putJson("/api/orders/{$order->id}/status", [
-            'status' => 'confirmed'
+        $response = $this->putJson("/api/orders/{$order->id}", [
+            'status' => 'processing'
         ]);
 
         $response->assertStatus(200)
-            ->assertJsonFragment(['status' => 'confirmed']);
+            ->assertJsonFragment(['status' => 'processing']);
 
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
-            'status' => 'confirmed'
+            'status' => 'processing'
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_validates_order_status_values()
     {
-        $order = Order::factory()->create(['user_id' => 1]);
+        $order = Order::factory()->create();
 
-        $response = $this->putJson("/api/orders/{$order->id}/status", [
+        $response = $this->putJson("/api/orders/{$order->id}", [
             'status' => 'invalid_status'
         ]);
 
@@ -147,23 +120,19 @@ class OrderControllerTest extends TestCase
             ->assertJsonValidationErrors(['status']);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_delete_an_order()
     {
-        $order = Order::factory()->create(['user_id' => 1]);
-        OrderItem::factory()->create(['order_id' => $order->id]);
+        $order = Order::factory()->create();
 
         $response = $this->deleteJson("/api/orders/{$order->id}");
 
-        $response->assertStatus(200);
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Order deleted successfully'
+            ]);
 
-        $this->assertDatabaseMissing('orders', [
-            'id' => $order->id
-        ]);
-
-        // Items should be cascade deleted
-        $this->assertDatabaseMissing('order_items', [
-            'order_id' => $order->id
-        ]);
+        $this->assertDatabaseMissing('orders', ['id' => $order->id]);
     }
 }

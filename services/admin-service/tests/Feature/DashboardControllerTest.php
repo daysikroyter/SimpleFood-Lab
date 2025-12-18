@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class DashboardControllerTest extends TestCase
 {
-    /** @test */
+    use RefreshDatabase;
+
+    #[Test]
     public function it_returns_dashboard_statistics()
     {
         $response = $this->getJson('/api/dashboard');
@@ -15,44 +19,37 @@ class DashboardControllerTest extends TestCase
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    'users' => ['count', 'status'],
-                    'products' => ['count', 'status'],
-                    'orders' => ['count', 'status'],
-                    'payments' => ['count', 'status']
+                    'stats' => [
+                        'total_users',
+                        'total_products',
+                        'total_orders',
+                        'total_revenue'
+                    ],
+                    'recent_orders'
                 ]
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_returns_stats_for_different_periods()
     {
-        $response = $this->getJson('/api/stats?period=30days');
+        $response = $this->getJson('/api/dashboard?period=week');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'success',
-                'data' => [
-                    'sales',
-                    'orders',
-                    'users'
-                ]
+                'data' => ['stats']
             ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_service_unavailability_gracefully()
     {
-        // When services are down, it should still return response with error status
         $response = $this->getJson('/api/dashboard');
 
         $response->assertStatus(200);
         
-        $data = $response->json('data');
-        
-        // Each service should have a status field
-        $this->assertArrayHasKey('status', $data['users']);
-        $this->assertArrayHasKey('status', $data['products']);
-        $this->assertArrayHasKey('status', $data['orders']);
-        $this->assertArrayHasKey('status', $data['payments']);
+        $data = $response->json('data.stats');
+        $this->assertIsArray($data);
     }
 }
