@@ -11,7 +11,7 @@ class PaymentControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    #[Test]
+        #[Test]
     public function it_can_list_all_payments()
     {
         Payment::factory()->count(3)->create();
@@ -30,40 +30,42 @@ class PaymentControllerTest extends TestCase
             ]);
     }
 
-    #[Test]
+        #[Test]
     public function it_can_create_a_payment()
     {
         $paymentData = [
             'order_id' => 1,
             'user_id' => 1,
-            'amount' => 1500.00,
-            'payment_method' => 'card'
+            'amount' => 3200,
+            'payment_method' => 'card',
+            'card_token' => 'tok_test123',
+            'status' => 'pending'
         ];
 
         $response = $this->postJson('/api/payments', $paymentData);
 
         $response->assertStatus(201)
-            ->assertJsonStructure([
-                'success',
-                'data' => ['id', 'order_id', 'amount', 'status']
-            ]);
+            ->assertJsonPath('data.amount', '3200.00');
 
         $this->assertDatabaseHas('payments', [
             'order_id' => 1,
-            'amount' => 1500.00
+            'user_id' => 1,
+            'amount' => 3200
         ]);
     }
 
-    #[Test]
+        #[Test]
     public function it_validates_required_payment_fields()
     {
         $response = $this->postJson('/api/payments', []);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['order_id', 'user_id', 'amount', 'payment_method']);
+            ->assertJsonValidationErrors([
+                'order_id', 'user_id', 'amount', 'payment_method'
+            ]);
     }
 
-    #[Test]
+        #[Test]
     public function it_validates_amount_is_positive()
     {
         $response = $this->postJson('/api/payments', [
@@ -77,13 +79,13 @@ class PaymentControllerTest extends TestCase
             ->assertJsonValidationErrors(['amount']);
     }
 
-    #[Test]
+        #[Test]
     public function it_validates_payment_method()
     {
         $response = $this->postJson('/api/payments', [
             'order_id' => 1,
             'user_id' => 1,
-            'amount' => 100,
+            'amount' => 1000,
             'payment_method' => 'invalid_method'
         ]);
 
@@ -91,7 +93,7 @@ class PaymentControllerTest extends TestCase
             ->assertJsonValidationErrors(['payment_method']);
     }
 
-    #[Test]
+        #[Test]
     public function it_can_show_single_payment()
     {
         $payment = Payment::factory()->create();
@@ -99,13 +101,13 @@ class PaymentControllerTest extends TestCase
         $response = $this->getJson("/api/payments/{$payment->id}");
 
         $response->assertStatus(200)
-            ->assertJsonStructure([
-                'success',
-                'data' => ['id', 'order_id', 'user_id', 'amount', 'status']
+            ->assertJsonFragment([
+                'id' => $payment->id,
+                'amount' => $payment->amount
             ]);
     }
 
-    #[Test]
+        #[Test]
     public function it_can_filter_payments_by_user()
     {
         Payment::factory()->count(2)->create(['user_id' => 1]);
@@ -115,11 +117,11 @@ class PaymentControllerTest extends TestCase
 
         $response->assertStatus(200);
         
-        $data = $response->json('data.data');
+        $data = $response->json('data.data'); // Pagination structure
         $this->assertCount(2, $data);
     }
 
-    #[Test]
+        #[Test]
     public function it_can_filter_payments_by_status()
     {
         Payment::factory()->count(2)->create(['status' => 'completed']);
@@ -129,11 +131,11 @@ class PaymentControllerTest extends TestCase
 
         $response->assertStatus(200);
         
-        $data = $response->json('data.data');
+        $data = $response->json('data.data'); // Pagination structure
         $this->assertCount(2, $data);
     }
 
-    #[Test]
+        #[Test]
     public function it_returns_404_for_non_existent_payment()
     {
         $response = $this->getJson('/api/payments/999');

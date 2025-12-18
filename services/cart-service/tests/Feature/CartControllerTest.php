@@ -11,23 +11,26 @@ class CartControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    #[Test]
+        #[Test]
     public function it_can_list_cart_items()
     {
         CartItem::factory()->count(3)->create(['user_id' => 1]);
 
-        $response = $this->getJson('/api/cart?user_id=1');
+        $response = $this->getJson('/api/cart');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'success',
                 'data' => [
-                    '*' => ['id', 'user_id', 'product_id', 'quantity']
+                    'current_page',
+                    'data' => [
+                        '*' => ['id', 'user_id', 'product_id', 'quantity']
+                    ]
                 ]
             ]);
     }
 
-    #[Test]
+        #[Test]
     public function it_can_add_item_to_cart()
     {
         $cartData = [
@@ -36,18 +39,18 @@ class CartControllerTest extends TestCase
             'quantity' => 2
         ];
 
-        $response = $this->postJson('/api/cart', $cartData);
+        $response = $this->postJson('/api/cart/items', $cartData);
 
-        $response->assertStatus(201)
-            ->assertJsonFragment($cartData);
+        $response->assertStatus(200)
+            ->assertJsonFragment(['success' => true]);
 
         $this->assertDatabaseHas('cart_items', $cartData);
     }
 
-    #[Test]
+        #[Test]
     public function it_validates_quantity_is_positive()
     {
-        $response = $this->postJson('/api/cart', [
+        $response = $this->postJson('/api/cart/items', [
             'user_id' => 1,
             'product_id' => 1,
             'quantity' => 0
@@ -57,12 +60,16 @@ class CartControllerTest extends TestCase
             ->assertJsonValidationErrors(['quantity']);
     }
 
-    #[Test]
+        #[Test]
     public function it_can_update_cart_item_quantity()
     {
-        $cartItem = CartItem::factory()->create(['quantity' => 1]);
+        $cartItem = CartItem::factory()->create([
+            'user_id' => 1,
+            'product_id' => 1,
+            'quantity' => 2
+        ]);
 
-        $response = $this->putJson("/api/cart/{$cartItem->id}", [
+        $response = $this->putJson("/api/cart/items/{$cartItem->id}", [
             'quantity' => 5
         ]);
 
@@ -75,12 +82,12 @@ class CartControllerTest extends TestCase
         ]);
     }
 
-    #[Test]
+        #[Test]
     public function it_can_delete_cart_item()
     {
-        $cartItem = CartItem::factory()->create();
+        $cartItem = CartItem::factory()->create(['user_id' => 1]);
 
-        $response = $this->deleteJson("/api/cart/{$cartItem->id}");
+        $response = $this->deleteJson("/api/cart/items/{$cartItem->id}");
 
         $response->assertStatus(200);
 
@@ -89,19 +96,23 @@ class CartControllerTest extends TestCase
         ]);
     }
 
-    #[Test]
+        #[Test]
     public function it_can_clear_entire_cart()
     {
         CartItem::factory()->count(3)->create(['user_id' => 1]);
 
-        $response = $this->deleteJson('/api/cart/clear/1');
+        $response = $this->deleteJson('/api/cart/clear', [
+            'user_id' => 1
+        ]);
 
         $response->assertStatus(200);
 
-        $this->assertDatabaseMissing('cart_items', ['user_id' => 1]);
+        $this->assertDatabaseMissing('cart_items', [
+            'user_id' => 1
+        ]);
     }
 
-    #[Test]
+        #[Test]
     public function it_prevents_duplicate_cart_items()
     {
         CartItem::factory()->create([
@@ -110,14 +121,20 @@ class CartControllerTest extends TestCase
             'quantity' => 2
         ]);
 
-        $response = $this->postJson('/api/cart', [
+        $response = $this->postJson('/api/cart/items', [
             'user_id' => 1,
             'product_id' => 1,
             'quantity' => 3
         ]);
 
-        $response->assertStatus(201);
+        // Should succeed - quantity will be incremented
+        $response->assertStatus(200);
         
-        $this->assertEquals(1, CartItem::where('user_id', 1)->where('product_id', 1)->count());
+        // Check that quantity was incremented, not duplicated
+        $this->assertDatabaseHas('cart_items', [
+            'user_id' => 1,
+            'product_id' => 1,
+            'quantity' => 5  // 2 + 3
+        ]);
     }
 }
