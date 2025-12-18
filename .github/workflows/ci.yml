@@ -39,11 +39,13 @@ jobs:
 
       - name: Copy .env.testing
         working-directory: ./services/${{ matrix.service }}
-        run: cp .env.testing .env
+        run: |
+          cp .env.testing .env
+          php artisan key:generate --force
 
       - name: Run tests
         working-directory: ./services/${{ matrix.service }}
-        run: vendor/bin/phpunit --testdox
+        run: php artisan test
         env:
           DB_CONNECTION: sqlite
           DB_DATABASE: ":memory:"
